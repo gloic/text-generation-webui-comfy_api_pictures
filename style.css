@@ -1,0 +1,17 @@
+/* Image Elements */
+.comfy-image-placeholder {
+    padding: 10px;
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 5px;
+    margin-top: 10px;
+    font-style: italic;
+    color: var(--body-text-color);
+}
+
+.comfy-generated-image {
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+    display: block;
+    max-width: 100%;
+    margin-top: 10px;
+}
