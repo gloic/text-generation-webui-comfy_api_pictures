@@ -23,9 +23,36 @@ This extension integrates ComfyUI with text-generation-webui, allowing the LLM t
 1.  Enable the extension via the **Session** tab or by launching with `--extensions comfy_api_pictures`.
 2.  In the "ComfyUI Generation" section of the UI:
     - **ComfyUI Server URL**: Set your ComfyUI address.
-    - **Workflow**: Select a workflow JSON file. The workflow MUST have a node with an input named `prompt` or be a standard TextEncode node to receive the prompt from the LLM.
+    - **Workflow**: Select a workflow JSON file.
     - **Mode**: Choose how you want the generation to be triggered.
 3.  **Modes**:
     - **Manual**: Click "Force the picture response" before sending a message to get an image.
     - **Interactive**: Say "send me a picture of a cat" to trigger generation.
     - **Picturebook**: Every message will have an accompanying image.
+
+## Workflow Setup
+
+To use a workflow with this extension, you must mark the node that will receive the prompt from the LLM:
+
+1.  Open your workflow in ComfyUI
+2.  Find the node that encodes the positive prompt (e.g., `TextEncode`, `TextEncodeQwenImageEditPlus`, etc.)
+3.  In that node's `prompt` or `text` input field, replace the actual prompt with: `YOUR PROMPT HERE`
+4.  Export the workflow as JSON and save it in the `workflows/` folder
+
+**Example:**
+```json
+{
+  "1:99": {
+    "inputs": {
+      "prompt": "YOUR PROMPT HERE",
+      "clip": ["1:104", 0]
+    },
+    "class_type": "TextEncodeQwenImageEditPlus"
+  }
+}
+```
+
+**Important:**
+- The extension will search for the exact string `YOUR PROMPT HERE` in the workflow JSON
+- If not found, the generation will fail with a clear error message
+- You can have multiple prompt nodes (positive/negative), but only mark the one you want to replace
