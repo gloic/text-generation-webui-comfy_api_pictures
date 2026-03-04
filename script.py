@@ -15,7 +15,7 @@ from PIL import Image
 # Default params
 params = {
     "comfyui_url": "http://127.0.0.1:8188",
-    "selected_workflow": "Qwen-image-Rapid-AIO.json",
+    "selected_workflow": "",
     "mode": 0,  # modes of operation: 0 (Manual only), 1 (Immersive/Interactive - looks for words to trigger), 2 (Picturebook Adventure - Always on)
     "prompt_prefix": "",
     "textgen_prefix": "Please provide a detailed and vivid description of [subject]",
