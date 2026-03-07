@@ -16,7 +16,6 @@ def create_ui_components(params):
     workflows = get_workflows()
     with gr.Accordion("ComfyUI Generation", open=True):
         with gr.Column():
-            gr.Markdown("## ComfyUI Generation")
             with gr.Row():
                 comfy_url = gr.Textbox(
                     label="ComfyUI Server URL", value=params["comfyui_url"]
