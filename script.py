@@ -209,12 +209,13 @@ def replace_image_tags_with_images(text, image_results):
     # Sort results by position
     sorted_results = sorted(image_results, key=lambda x: x["start_pos"])
 
-    # Build replacement list
+    # Build replacements with progress updates
     replacements = []
     for result in sorted_results:
         if result["image_data"]:
             base64_img = base64.b64encode(result["image_data"]).decode("utf-8")
-            replacement = f'<img src="data:image/png;base64,{base64_img}" alt="Generated Image" />'
+            # Add image with newline for better display
+            replacement = f'\n<img src="data:image/png;base64,{base64_img}" alt="Generated Image" />\n'
         else:
             # Keep original text if generation failed
             replacement = f"<image>{result['prompt']}</image>"
@@ -229,7 +230,7 @@ def replace_image_tags_with_images(text, image_results):
 
 
 def generate_multiple_images_sequential(prompts, workflow_name, url):
-    """Generate multiple images sequentially.
+    """Generate multiple images sequentially with progress updates.
 
     Args:
         prompts: list of prompt strings
@@ -299,6 +300,8 @@ def generate_multiple_images_sequential(prompts, workflow_name, url):
             print(
                 f"[MODE 3] Image {idx + 1} generated successfully ({len(img_data)} bytes)"
             )
+            # Add small delay for better UX
+            time.sleep(0.3)
         else:
             print(f"[MODE 3] Image {idx + 1} generation FAILED")
 
@@ -311,9 +314,6 @@ def generate_multiple_images_sequential(prompts, workflow_name, url):
                 "end_pos": 0,  # Will be updated by caller
             }
         )
-
-        # Small delay between generations to avoid overwhelming the server
-        time.sleep(0.5)
 
     return results
 
@@ -395,10 +395,6 @@ def output_modifier(string, state):
         if tags:
             prompts = [tag[0] for tag in tags]
             print(f"[MODE 3] Will generate {len(prompts)} image(s)")
-
-            # Show indicator if multiple images
-            if len(tags) > 1:
-                string = "*Generating images...*\\n" + string
 
             # Generate images sequentially
             results = generate_multiple_images_sequential(
