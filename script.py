@@ -19,7 +19,6 @@ params = {
     "selected_workflow": "",
     "mode": 0,  # modes of operation: 0 (Manual only), 1 (Immersive/Interactive - looks for words to trigger), 2 (Picturebook Adventure - Always on), 3 (Process Tags - parse and generate <image> tags)
     "prompt_prefix": "",
-    "textgen_prefix": "Please provide a detailed and vivid description of [subject]",
 }
 
 picture_response = (
@@ -365,9 +364,13 @@ def input_modifier(string):
             )[
                 1
             ]  # subdivide the string once by the first 'of' instance and get what's coming after it
-            string = params["textgen_prefix"].replace("[subject]", subject)
+            string = (
+                "Please provide a detailed and vivid description of [subject]".replace(
+                    "[subject]", subject
+                )
+            )
         else:
-            string = params["textgen_prefix"].replace(
+            string = "Please provide a detailed and vivid description of [subject]".replace(
                 "[subject]",
                 "your appearance, your surroundings and what you are doing right now",
             )
