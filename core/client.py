@@ -143,5 +143,7 @@ class ComfyUIClient:
             return output_images[0] if output_images else None
 
         except Exception as e:
-            print(f"Error calling ComfyUI: {e}")
+            from ..utils.helpers import debug_log
+
+            debug_log(f"Error calling ComfyUI: {e}", debug=False)
             return None

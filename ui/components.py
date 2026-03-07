@@ -54,6 +54,8 @@ def create_ui_components(params):
                 )
                 generate_btn = gr.Button("Generate Test Image")
 
+            debug_checkbox = gr.Checkbox(label="Debug Mode", value=False)
+
             output_image = gr.HTML(label="Generated Image")
 
             return {
@@ -66,4 +68,5 @@ def create_ui_components(params):
                 "test_prompt": test_prompt,
                 "generate_btn": generate_btn,
                 "output_image": output_image,
+                "debug_checkbox": debug_checkbox,
             }

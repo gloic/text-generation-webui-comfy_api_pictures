@@ -8,13 +8,19 @@ from .core.client import ComfyUIClient
 from .core.workflow import get_workflows, load_workflow
 from .utils.helpers import generate_webui
 from .modes import Mode, ManualMode, ImmersiveMode, PicturebookMode, TagProcessorMode
-from .global_state import picture_response, toggle_generation
+from .global_state import (
+    picture_response,
+    toggle_generation,
+    debug_enabled,
+    toggle_debug,
+)
 
 # Default params
 params = {
     "comfyui_url": "http://127.0.0.1:8188",
     "selected_workflow": "",
     "mode": 0,  # modes of operation: 0 (Manual), 1 (Immersive), 2 (Picturebook), 3 (Process Tags)
+    "debug": False,
 }
 
 
@@ -33,7 +39,9 @@ def get_mode_instance(mode_index):
         PicturebookMode,
         TagProcessorMode,
     ]
-    return mode_classes[mode_index](params, picture_response)
+    return mode_classes[mode_index](
+        params, picture_response, params.get("debug", False)
+    )
 
 
 def input_modifier(string):
@@ -62,8 +70,11 @@ def output_modifier(string, state):
     mode = get_mode_instance(params["mode"])
     result = mode.process_output(string, state)
 
-    print(
-        f"[OUTPUT_MOD] Mode: {params['mode']}, picture_response: {picture_response}, result type: {type(result)}"
+    from .utils.helpers import debug_log
+
+    debug_log(
+        f"[OUTPUT_MOD] Mode: {params['mode']}, picture_response: {picture_response}, result type: {type(result)}",
+        debug=params.get("debug", False),
     )
 
     return result
@@ -94,8 +105,11 @@ def ui():
     )
 
     def on_generate_test(prompt, wf_name, url):
-        print(
-            f"[TEST CLICK] Workflow: '{wf_name}', URL: {url}, Prompt: '{prompt[:50]}...'"
+        from .utils.helpers import debug_log
+
+        debug_log(
+            f"[TEST CLICK] Workflow: '{wf_name}', URL: {url}, Prompt: '{prompt[:50]}...'",
+            debug=params.get("debug", False),
         )
         return generate_webui(prompt, wf_name, url)
 
@@ -136,9 +150,15 @@ def ui():
     components["suppr_pic"].click(
         lambda x: toggle_generation(False), inputs=components["suppr_pic"], outputs=None
     )
+    components["debug_checkbox"].change(
+        lambda x: params.update({"debug": x}), components["debug_checkbox"], None
+    )
 
-    print(
-        f"[INIT] Extension initialized. Mode: {params['mode']}, Workflow: '{params['selected_workflow']}'"
+    from .utils.helpers import debug_log
+
+    debug_log(
+        f"[INIT] Extension initialized. Mode: {params['mode']}, Workflow: '{params['selected_workflow']}'",
+        debug=params.get("debug", False),
     )
 
     return [
@@ -151,4 +171,5 @@ def ui():
         components["test_prompt"],
         components["generate_btn"],
         components["output_image"],
+        components["debug_checkbox"],
     ]

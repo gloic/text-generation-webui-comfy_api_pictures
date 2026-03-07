@@ -9,8 +9,8 @@ from ..global_state import toggle_generation
 class ImmersiveMode(Mode):
     """Mode 1: Immersive/Interactive - trigger words activate generation."""
 
-    def __init__(self, params, picture_response=None):
-        self.params = params
+    def __init__(self, params, picture_response=None, debug=False):
+        super().__init__(params, picture_response, debug)
 
     def process_input(self, text):
         """Check for trigger words and modify input.
@@ -27,7 +27,12 @@ class ImmersiveMode(Mode):
         from ..global_state import toggle_generation
 
         toggle_generation(True)
-        print("[IMMERSIVE MODE] Trigger detected, picture_response set to True")
+        from ..utils.helpers import debug_log
+
+        debug_log(
+            "[IMMERSIVE MODE] Trigger detected, picture_response set to True",
+            debug=self.debug,
+        )
 
         # Trigger detected - modify text
         text = text.lower()
@@ -59,8 +64,11 @@ class ImmersiveMode(Mode):
         from ..global_state import picture_response
 
         if not picture_response:
-            print(
-                "[IMMERSIVE MODE] picture_response is False, returning text unchanged"
+            from ..utils.helpers import debug_log
+
+            debug_log(
+                "[IMMERSIVE MODE] picture_response is False, returning text unchanged",
+                debug=self.debug,
             )
             return text
 
@@ -70,21 +78,27 @@ class ImmersiveMode(Mode):
         workflow_name = self.params["selected_workflow"]
         url = self.params["comfyui_url"]
 
-        print(f"[IMMERSIVE MODE] Generating image...")
-        print(f"[IMMERSIVE MODE] Using workflow: '{workflow_name}'")
-        print(f"[IMMERSIVE MODE] Using URL: {url}")
-        print(f"[IMMERSIVE MODE] Last text: '{text[:100]}...'")
+        from ..utils.helpers import debug_log
+
+        debug_log(f"[IMMERSIVE MODE] Generating image...", debug=self.debug)
+        debug_log(
+            f"[IMMERSIVE MODE] Using workflow: '{workflow_name}'", debug=self.debug
+        )
+        debug_log(f"[IMMERSIVE MODE] Using URL: {url}", debug=self.debug)
+        debug_log(f"[IMMERSIVE MODE] Last text: '{text[:100]}...'", debug=self.debug)
 
         image_html = generate_webui(text, workflow_name, url)
 
         # Consume picture_response after generation
         toggle_generation(False)
 
+        from ..utils.helpers import debug_log
+
         if image_html:
-            print("[IMMERSIVE MODE] Image generated successfully")
+            debug_log("[IMMERSIVE MODE] Image generated successfully", debug=self.debug)
             return f"{text}\n\n{image_html}"
         else:
-            print("[IMMERSIVE MODE] Image generation failed")
+            debug_log("[IMMERSIVE MODE] Image generation failed", debug=self.debug)
             return text
 
     def _triggers_are_in(self, string):

@@ -21,11 +21,15 @@ def parse_image_tags(text):
         unescaped_text = html.unescape(text)
         pattern = r"<image>(.*?)</image>"
         matches = list(re.finditer(pattern, unescaped_text, re.DOTALL))
-        print(f"[MODE 3] Found {len(matches)} tags in unescaped text")
+        from ..utils.helpers import debug_log
+
+        debug_log(f"[MODE 3] Found {len(matches)} tags in unescaped text", debug=False)
     else:
         pattern = r"<image>(.*?)</image>"
         matches = list(re.finditer(pattern, text, re.DOTALL))
-        print(f"[MODE 3] Found {len(matches)} tags in text")
+        from ..utils.helpers import debug_log
+
+        debug_log(f"[MODE 3] Found {len(matches)} tags in text", debug=False)
 
     results = []
     for match in matches:

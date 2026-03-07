@@ -11,8 +11,8 @@ from ..core.workflow import load_workflow
 class TagProcessorMode(Mode):
     """Mode 3: Process Tags - automatically parse and generate <image> tags."""
 
-    def __init__(self, params, picture_response=None):
-        self.params = params
+    def __init__(self, params, picture_response=None, debug=False):
+        super().__init__(params, picture_response, debug)
 
     def process_input(self, text):
         """Mode 3 doesn't modify input.
@@ -35,19 +35,29 @@ class TagProcessorMode(Mode):
         Returns:
             Text with tags replaced by images
         """
-        print(
-            f"[MODE 3] Processing image tags. Workflow: '{self.params['selected_workflow']}', URL: {self.params['comfyui_url']}"
+        from ..utils.helpers import debug_log
+
+        debug_log(
+            f"[MODE 3] Processing image tags. Workflow: '{self.params['selected_workflow']}', URL: {self.params['comfyui_url']}",
+            debug=self.debug,
         )
-        print(f"[MODE 3] Raw string preview: {text[:200]}")
-        print(f"[MODE 3] String contains '<image>': {'<image>' in text}")
-        print(f"[MODE 3] String contains '&lt;image&gt;': {'&lt;image&gt;' in text}")
+        debug_log(f"[MODE 3] Raw string preview: {text[:200]}", debug=self.debug)
+        debug_log(
+            f"[MODE 3] String contains '<image>': {'<image>' in text}", debug=self.debug
+        )
+        debug_log(
+            f"[MODE 3] String contains '&lt;image&gt;': {'&lt;image&gt;' in text}",
+            debug=self.debug,
+        )
 
         tags = parse_image_tags(text)
-        print(f"[MODE 3] Found {len(tags)} tags in response")
+        debug_log(f"[MODE 3] Found {len(tags)} tags in response", debug=self.debug)
 
         if tags:
             prompts = [tag[0] for tag in tags]
-            print(f"[MODE 3] Will generate {len(prompts)} image(s)")
+            debug_log(
+                f"[MODE 3] Will generate {len(prompts)} image(s)", debug=self.debug
+            )
 
             # Generate images sequentially
             results = self._generate_multiple_images_sequential(
@@ -61,7 +71,11 @@ class TagProcessorMode(Mode):
 
             # Replace tags with images
             text = replace_image_tags_with_images(text, results)
-            print(f"[MODE 3] Completed processing {len(results)} images")
+            from ..utils.helpers import debug_log
+
+            debug_log(
+                f"[MODE 3] Completed processing {len(results)} images", debug=self.debug
+            )
 
         return text
 
@@ -76,13 +90,18 @@ class TagProcessorMode(Mode):
         Returns:
             List of result dicts with prompt, image_data, success, start_pos, end_pos
         """
-        print(f"[MODE 3] Loading workflow: {workflow_name}")
+        from ..utils.helpers import debug_log
+
+        debug_log(f"[MODE 3] Loading workflow: {workflow_name}", debug=self.debug)
         results = []
         client = ComfyUIClient(url)
         workflow = load_workflow(workflow_name)
 
         if not workflow:
-            print(f"[MODE 3] ERROR: Workflow '{workflow_name}' not found!")
+            debug_log(
+                f"[MODE 3] ERROR: Workflow '{workflow_name}' not found!",
+                debug=self.debug,
+            )
             for i, prompt in enumerate(prompts):
                 results.append(
                     {
@@ -95,7 +114,10 @@ class TagProcessorMode(Mode):
                 )
             return results
 
-        print(f"[MODE 3] Workflow loaded successfully with {len(workflow)} nodes")
+        debug_log(
+            f"[MODE 3] Workflow loaded successfully with {len(workflow)} nodes",
+            debug=self.debug,
+        )
 
         # Verify workflow has prompt placeholder
         has_prompt_placeholder = False
@@ -104,25 +126,33 @@ class TagProcessorMode(Mode):
                 for input_key, input_val in node["inputs"].items():
                     if isinstance(input_val, str) and "YOUR PROMPT HERE" in input_val:
                         has_prompt_placeholder = True
-                        print(f"[MODE 3] Found prompt placeholder in node {key}")
+                        debug_log(
+                            f"[MODE 3] Found prompt placeholder in node {key}",
+                            debug=self.debug,
+                        )
                         break
             if has_prompt_placeholder:
                 break
 
         if not has_prompt_placeholder:
-            print(
-                f"[MODE 3] WARNING: No 'YOUR PROMPT HERE' placeholder found in workflow!"
+            debug_log(
+                f"[MODE 3] WARNING: No 'YOUR PROMPT HERE' placeholder found in workflow!",
+                debug=self.debug,
             )
 
         for idx, prompt in enumerate(prompts):
-            print(
-                f"[MODE 3] Generating image {idx + 1}/{len(prompts)}: '{prompt[:80]}...'"
+            debug_log(
+                f"[MODE 3] Generating image {idx + 1}/{len(prompts)}: '{prompt[:80]}...'",
+                debug=self.debug,
             )
 
             # Reload workflow for each generation to avoid modifying the same object
             workflow = load_workflow(workflow_name)
             if not workflow:
-                print(f"[MODE 3] ERROR: Could not reload workflow '{workflow_name}'")
+                debug_log(
+                    f"[MODE 3] ERROR: Could not reload workflow '{workflow_name}'",
+                    debug=self.debug,
+                )
                 results.append(
                     {
                         "prompt": prompt,
@@ -137,13 +167,16 @@ class TagProcessorMode(Mode):
             img_data = client.generate_image(workflow, prompt)
 
             if img_data:
-                print(
-                    f"[MODE 3] Image {idx + 1} generated successfully ({len(img_data)} bytes)"
+                debug_log(
+                    f"[MODE 3] Image {idx + 1} generated successfully ({len(img_data)} bytes)",
+                    debug=self.debug,
                 )
                 # Add small delay for better UX
                 time.sleep(0.3)
             else:
-                print(f"[MODE 3] Image {idx + 1} generation FAILED")
+                debug_log(
+                    f"[MODE 3] Image {idx + 1} generation FAILED", debug=self.debug
+                )
 
             results.append(
                 {

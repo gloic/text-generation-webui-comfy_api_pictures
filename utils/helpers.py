@@ -5,6 +5,17 @@ import base64
 from ..core.workflow import load_workflow
 
 
+def debug_log(message, debug=False):
+    """Print debug message if debug mode is enabled.
+
+    Args:
+        message: Message to print
+        debug: Debug flag
+    """
+    if debug:
+        print(message)
+
+
 def generate_webui(prompt, workflow_name, url):
     """Generate an image via ComfyUI and return HTML img tag.
 
@@ -18,11 +29,15 @@ def generate_webui(prompt, workflow_name, url):
     """
     from ..core.client import ComfyUIClient
 
-    print(f"[TEST MODE] Generating image with workflow: {workflow_name}")
+    debug_log(
+        f"[TEST MODE] Generating image with workflow: {workflow_name}", debug=False
+    )
     client = ComfyUIClient(url)
     workflow = load_workflow(workflow_name)
     if not workflow:
-        print(f"[TEST MODE] ERROR: Workflow '{workflow_name}' not found")
+        debug_log(
+            f"[TEST MODE] ERROR: Workflow '{workflow_name}' not found", debug=False
+        )
         return None
 
     img_data = client.generate_image(workflow, prompt)
