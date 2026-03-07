@@ -10,6 +10,7 @@ This extension integrates ComfyUI with text-generation-webui, allowing the LLM t
     - **Manual**: Only generates images when forced via the "Force the picture response" button.
     - **Immersive/Interactive**: Watches for trigger words (e.g., "send me a picture", "show me") in your input to automatically trigger image generation for the next response.
     - **Picturebook/Adventure**: Always generates an image for every response.
+    - **Process Tags**: Automatically parses `<image>prompt</image>` tags in the LLM's response and generates an image for each tag, replacing the tags with the generated images.
 - **Workflow Support**: Select from available ComfyUI workflows (in JSON format) stored in the `extensions/comfy_api_pictures/comfyui/workflows` directory.
 
 ## Installation
@@ -29,6 +30,10 @@ This extension integrates ComfyUI with text-generation-webui, allowing the LLM t
     - **Manual**: Click "Force the picture response" before sending a message to get an image.
     - **Interactive**: Say "send me a picture of a cat" to trigger generation.
     - **Picturebook**: Every message will have an accompanying image.
+    - **Process Tags**: Write your response with `<image>prompt</image>` tags. The extension will generate an image for each tag and replace the tags with the actual images in the chat.
+      - Example: `The scene shows <image>a serene lake at sunset with mountains in the background</image> and <image>a fishing boat in the foreground</image>.`
+      - Images are generated sequentially (one after another).
+      - If an image generation fails, the original `<image>prompt</image>` tag is kept in the response.
 
 ## Workflow Setup
 

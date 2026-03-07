@@ -10,13 +10,14 @@ import re
 import time
 import base64
 import io
+import html
 from PIL import Image
 
 # Default params
 params = {
     "comfyui_url": "http://127.0.0.1:8188",
     "selected_workflow": "",
-    "mode": 0,  # modes of operation: 0 (Manual only), 1 (Immersive/Interactive - looks for words to trigger), 2 (Picturebook Adventure - Always on)
+    "mode": 0,  # modes of operation: 0 (Manual only), 1 (Immersive/Interactive - looks for words to trigger), 2 (Picturebook Adventure - Always on), 3 (Process Tags - parse and generate <image> tags)
     "prompt_prefix": "",
     "textgen_prefix": "Please provide a detailed and vivid description of [subject]",
 }
@@ -143,9 +144,11 @@ def load_workflow(workflow_name):
 
 
 def generate_webui(prompt, workflow_name, url):
+    print(f"[TEST MODE] Generating image with workflow: {workflow_name}")
     client = ComfyUIClient(url)
     workflow = load_workflow(workflow_name)
     if not workflow:
+        print(f"[TEST MODE] ERROR: Workflow '{workflow_name}' not found")
         return None
 
     img_data = client.generate_image(workflow, prompt)
@@ -154,6 +157,165 @@ def generate_webui(prompt, workflow_name, url):
         base64_img = base64.b64encode(img_data).decode("utf-8")
         return f'<img src="data:image/png;base64,{base64_img}" alt="Generated Image" />'
     return None
+
+
+def parse_image_tags(text):
+    """Parse <image>...</image> tags from text.
+
+    If tags are HTML-escaped (&lt;image&gt;), unescape them first to get correct positions.
+
+    Returns a list of tuples: [(prompt1, start_pos1, end_pos1), (prompt2, start_pos2, end_pos2), ...]
+    """
+    # Check if text contains escaped tags
+    if "&lt;image&gt;" in text:
+        # Unescape the entire text to get correct positions
+        unescaped_text = html.unescape(text)
+        pattern = r"<image>(.*?)</image>"
+        matches = list(re.finditer(pattern, unescaped_text, re.DOTALL))
+        print(f"[MODE 3] Found {len(matches)} tags in unescaped text")
+    else:
+        pattern = r"<image>(.*?)</image>"
+        matches = list(re.finditer(pattern, text, re.DOTALL))
+        print(f"[MODE 3] Found {len(matches)} tags in text")
+
+    results = []
+    for match in matches:
+        prompt = match.group(1).strip()
+        start_pos = match.start()
+        end_pos = match.end()
+        results.append((prompt, start_pos, end_pos))
+
+    return results
+
+
+def replace_image_tags_with_images(text, image_results):
+    """Replace <image>...</image> tags with generated images.
+
+    image_results: list of dicts with keys: 'prompt', 'image_data' (or None), 'success', 'start_pos', 'end_pos'
+    Returns text with tags replaced by <img> tags or original text if failed.
+    """
+    if not image_results:
+        return text
+
+    # Check if text contains escaped tags - if so, work with unescaped version
+    if "&lt;image&gt;" in text:
+        import html
+
+        unescaped_text = html.unescape(text)
+        working_text = unescaped_text
+    else:
+        working_text = text
+
+    # Sort results by position
+    sorted_results = sorted(image_results, key=lambda x: x["start_pos"])
+
+    # Build replacement list
+    replacements = []
+    for result in sorted_results:
+        if result["image_data"]:
+            base64_img = base64.b64encode(result["image_data"]).decode("utf-8")
+            replacement = f'<img src="data:image/png;base64,{base64_img}" alt="Generated Image" />'
+        else:
+            # Keep original text if generation failed
+            replacement = f"<image>{result['prompt']}</image>"
+        replacements.append((result["start_pos"], result["end_pos"], replacement))
+
+    # Apply replacements from end to start to preserve positions
+    result_text = working_text
+    for start_pos, end_pos, replacement in reversed(replacements):
+        result_text = result_text[:start_pos] + replacement + result_text[end_pos:]
+
+    return result_text
+
+
+def generate_multiple_images_sequential(prompts, workflow_name, url):
+    """Generate multiple images sequentially.
+
+    Args:
+        prompts: list of prompt strings
+        workflow_name: workflow JSON filename
+        url: ComfyUI server URL
+
+    Returns:
+        list of dicts: [{'prompt': str, 'image_data': bytes or None, 'success': bool, 'start_pos': int, 'end_pos': int}, ...]
+    """
+    print(f"[MODE 3] Loading workflow: {workflow_name}")
+    results = []
+    client = ComfyUIClient(url)
+    workflow = load_workflow(workflow_name)
+
+    if not workflow:
+        print(f"[MODE 3] ERROR: Workflow '{workflow_name}' not found!")
+        for i, prompt in enumerate(prompts):
+            results.append(
+                {
+                    "prompt": prompt,
+                    "image_data": None,
+                    "success": False,
+                    "start_pos": 0,
+                    "end_pos": 0,
+                }
+            )
+        return results
+
+    print(f"[MODE 3] Workflow loaded successfully with {len(workflow)} nodes")
+
+    # Verify workflow has prompt placeholder
+    has_prompt_placeholder = False
+    for key, node in workflow.items():
+        if "inputs" in node:
+            for input_key, input_val in node["inputs"].items():
+                if isinstance(input_val, str) and "YOUR PROMPT HERE" in input_val:
+                    has_prompt_placeholder = True
+                    print(f"[MODE 3] Found prompt placeholder in node {key}")
+                    break
+        if has_prompt_placeholder:
+            break
+
+    if not has_prompt_placeholder:
+        print(f"[MODE 3] WARNING: No 'YOUR PROMPT HERE' placeholder found in workflow!")
+
+    for idx, prompt in enumerate(prompts):
+        print(f"[MODE 3] Generating image {idx + 1}/{len(prompts)}: '{prompt[:80]}...'")
+
+        # Reload workflow for each generation to avoid modifying the same object
+        workflow = load_workflow(workflow_name)
+        if not workflow:
+            print(f"[MODE 3] ERROR: Could not reload workflow '{workflow_name}'")
+            results.append(
+                {
+                    "prompt": prompt,
+                    "image_data": None,
+                    "success": False,
+                    "start_pos": 0,
+                    "end_pos": 0,
+                }
+            )
+            continue
+
+        img_data = client.generate_image(workflow, prompt)
+
+        if img_data:
+            print(
+                f"[MODE 3] Image {idx + 1} generated successfully ({len(img_data)} bytes)"
+            )
+        else:
+            print(f"[MODE 3] Image {idx + 1} generation FAILED")
+
+        results.append(
+            {
+                "prompt": prompt,
+                "image_data": img_data,
+                "success": img_data is not None,
+                "start_pos": 0,  # Will be updated by caller
+                "end_pos": 0,  # Will be updated by caller
+            }
+        )
+
+        # Small delay between generations to avoid overwhelming the server
+        time.sleep(0.5)
+
+    return results
 
 
 def remove_surrounded_chars(string):
@@ -216,6 +378,45 @@ def input_modifier(string):
 def output_modifier(string, state):
     global picture_response, params
 
+    print(f"[DEBUG] output_modifier called. Current mode: {params['mode']}")
+
+    # Mode 3: Process Tags - parse and generate <image> tags
+    if params["mode"] == 3:
+        print(
+            f"[MODE 3] Processing image tags. Workflow: '{params['selected_workflow']}', URL: {params['comfyui_url']}"
+        )
+        print(f"[MODE 3] Raw string preview: {string[:200]}")
+        print(f"[MODE 3] String contains '<image>': {'<image>' in string}")
+        print(f"[MODE 3] String contains '&lt;image&gt;': {'&lt;image&gt;' in string}")
+
+        tags = parse_image_tags(string)
+        print(f"[MODE 3] Found {len(tags)} tags in response")
+
+        if tags:
+            prompts = [tag[0] for tag in tags]
+            print(f"[MODE 3] Will generate {len(prompts)} image(s)")
+
+            # Show indicator if multiple images
+            if len(tags) > 1:
+                string = "*Generating images...*\\n" + string
+
+            # Generate images sequentially
+            results = generate_multiple_images_sequential(
+                prompts, params["selected_workflow"], params["comfyui_url"]
+            )
+
+            # Update positions in results
+            for i, (prompt, start_pos, end_pos) in enumerate(tags):
+                results[i]["start_pos"] = start_pos
+                results[i]["end_pos"] = end_pos
+
+            # Replace tags with images
+            string = replace_image_tags_with_images(string, results)
+            print(f"[MODE 3] Completed processing {len(results)} images")
+
+        return string
+
+    # Existing modes (0, 1, 2)
     if not picture_response:
         return string
 
@@ -232,7 +433,7 @@ def output_modifier(string, state):
     text = ""
     if params["mode"] < 2:
         toggle_generation(False)
-        text = f"*Sends a picture which portrays: “{cleaned_string}”*"
+        text = f"*Sends a picture which portrays: '{cleaned_string}'*"
     else:
         text = cleaned_string
 
@@ -268,7 +469,12 @@ def ui():
             refresh_btn = gr.Button("Refresh Workflows")
 
         with gr.Row():
-            modes_list = ["Manual", "Immersive/Interactive", "Picturebook/Adventure"]
+            modes_list = [
+                "Manual",
+                "Immersive/Interactive",
+                "Picturebook/Adventure",
+                "Process Tags",
+            ]
             mode = gr.Dropdown(
                 modes_list,
                 value=modes_list[params["mode"]],
@@ -288,6 +494,10 @@ def ui():
 
         output_image = gr.HTML(label="Generated Image")
 
+        print(
+            f"[INIT] Extension initialized. Mode: {params['mode']}, Workflow: '{params['selected_workflow']}'"
+        )
+
         # Event handlers
         def update_workflows():
             new_list = get_workflows()
@@ -298,10 +508,26 @@ def ui():
         refresh_btn.click(update_workflows, outputs=selected_workflow)
 
         def on_generate_test(prompt, wf_name, url):
+            print(
+                f"[TEST CLICK] Workflow: '{wf_name}', URL: {url}, Prompt: '{prompt[:50]}...'"
+            )
             return generate_webui(prompt, wf_name, url)
 
         generate_btn.click(
             on_generate_test,
+            inputs=[test_prompt, selected_workflow, comfy_url],
+            outputs=output_image,
+        )
+
+        # Log current workflow on test generation
+        def log_workflow_on_test(prompt, wf_name, url):
+            print(
+                f"[TEST CLICK] Workflow: '{wf_name}', URL: {url}, Prompt: '{prompt[:50]}...'"
+            )
+            return generate_webui(prompt, wf_name, url)
+
+        generate_btn.click(
+            log_workflow_on_test,
             inputs=[test_prompt, selected_workflow, comfy_url],
             outputs=output_image,
         )
@@ -312,7 +538,17 @@ def ui():
             lambda x: params.update({"selected_workflow": x}), selected_workflow, None
         )
         mode.select(lambda x: params.update({"mode": x}), mode, None)
-        mode.select(lambda x: toggle_generation(x > 1), inputs=mode, outputs=None)
+        mode.select(
+            lambda x: toggle_generation(x > 1 and x < 3), inputs=mode, outputs=None
+        )
+
+        def on_mode_change(x):
+            params.update({"mode": x})
+            print(f"[UI MODE CHANGE] Mode set to {x} ({modes_list[x]})")
+            print(f"[UI DEBUG] Current params: {params}")
+            return gr.update()
+
+        mode.select(on_mode_change, mode, None)
 
         force_pic.click(
             lambda x: toggle_generation(True), inputs=force_pic, outputs=None
