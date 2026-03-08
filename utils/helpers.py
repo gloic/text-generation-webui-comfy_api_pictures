@@ -40,9 +40,21 @@ def generate_webui(prompt, workflow_name, url):
         )
         return None
 
-    img_data = client.generate_image(workflow, prompt)
-    if img_data:
+    result = client.generate_image(workflow, prompt)
+    if result:
+        if isinstance(result, tuple):
+            img_data, original_filename = result
+        else:
+            img_data = result
+            original_filename = None
+
         # Create a base64 string for display
         base64_img = base64.b64encode(img_data).decode("utf-8")
-        return f'<img src="data:image/png;base64,{base64_img}" alt="Generated Image" />'
+
+        # Generate filename with timestamp
+        from ..utils.image_naming import generate_image_filename
+
+        filename = generate_image_filename()
+
+        return f'<img src="data:image/png;base64,{base64_img}" alt="{filename}" data-filename="{filename}" />'
     return None

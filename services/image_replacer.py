@@ -29,8 +29,12 @@ def replace_image_tags_with_images(text, image_results):
     for result in sorted_results:
         if result["image_data"]:
             base64_img = base64.b64encode(result["image_data"]).decode("utf-8")
+            # Generate filename with timestamp
+            from ..utils.image_naming import generate_image_filename
+
+            filename = generate_image_filename()
             # Add image with newline for better display
-            replacement = f'\n<img src="data:image/png;base64,{base64_img}" alt="Generated Image" />\n'
+            replacement = f'\n<img src="data:image/png;base64,{base64_img}" alt="{filename}" data-filename="{filename}" />\n'
         else:
             # Keep original text if generation failed
             replacement = f"<image>{result['prompt']}</image>"

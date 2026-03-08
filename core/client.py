@@ -138,9 +138,11 @@ class ComfyUIClient:
                             image_data = self.get_image(
                                 image["filename"], image["subfolder"], image["type"]
                             )
-                            output_images.append(image_data)
+                            output_images.append((image_data, image["filename"]))
 
-            return output_images[0] if output_images else None
+            if output_images:
+                return output_images[0][0]
+            return None
 
         except Exception as e:
             from ..utils.helpers import debug_log
