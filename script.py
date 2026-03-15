@@ -86,6 +86,14 @@ def custom_css():
         return f.read()
 
 
+def custom_js():
+    """Load custom JavaScript for gallery overlay."""
+    with open(
+        Path(__file__).parent / "javascript/gallery.js", "r", encoding="utf-8"
+    ) as f:
+        return f.read()
+
+
 def ui():
     """Create UI components."""
     from pathlib import Path

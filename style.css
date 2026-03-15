@@ -14,4 +14,10 @@
     display: block;
     max-width: 100%;
     margin-top: 10px;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.comfy-generated-image:hover {
+    transform: scale(1.02);
 }

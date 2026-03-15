@@ -56,5 +56,5 @@ def generate_webui(prompt, workflow_name, url):
 
         filename = generate_image_filename()
 
-        return f'<img src="data:image/png;base64,{base64_img}" alt="{filename}" data-filename="{filename}" />'
+        return f'<img src="data:image/png;base64,{base64_img}" alt="{filename}" data-filename="{filename}" data-index="0" class="comfy-generated-image" style="max-width: 100%; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); cursor: pointer; transition: transform 0.2s;" />'
     return None
