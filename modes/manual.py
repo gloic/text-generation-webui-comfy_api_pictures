@@ -2,7 +2,7 @@
 
 from .base import Mode
 from ..utils.helpers import generate_webui
-from ..global_state import toggle_generation, picture_response
+from ..global_state import toggle_generation
 
 
 class ManualMode(Mode):
@@ -32,7 +32,7 @@ class ManualMode(Mode):
         Returns:
             Modified text with image if forced
         """
-        if not picture_response:
+        if not self.picture_response:
             from ..utils.helpers import debug_log
 
             debug_log(

@@ -31,9 +31,7 @@ class PicturebookMode(Mode):
         Returns:
             Modified text with image
         """
-        from ..global_state import picture_response
-
-        if not picture_response:
+        if not self.picture_response:
             from ..utils.helpers import debug_log
 
             debug_log(

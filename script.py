@@ -8,10 +8,9 @@ from .core.client import ComfyUIClient
 from .core.workflow import get_workflows, load_workflow
 from .utils.helpers import generate_webui
 from .modes import Mode, ManualMode, ImmersiveMode, PicturebookMode, TagProcessorMode
+from . import global_state
 from .global_state import (
-    picture_response,
     toggle_generation,
-    debug_enabled,
     toggle_debug,
 )
 
@@ -40,7 +39,7 @@ def get_mode_instance(mode_index):
         TagProcessorMode,
     ]
     return mode_classes[mode_index](
-        params, picture_response, params.get("debug", False)
+        params, global_state.picture_response, params.get("debug", False)
     )
 
 
@@ -73,7 +72,7 @@ def output_modifier(string, state):
     from .utils.helpers import debug_log
 
     debug_log(
-        f"[OUTPUT_MOD] Mode: {params['mode']}, picture_response: {picture_response}, result type: {type(result)}",
+        f"[OUTPUT_MOD] Mode: {params['mode']}, picture_response: {global_state.picture_response}, result type: {type(result)}",
         debug=params.get("debug", False),
     )
 
